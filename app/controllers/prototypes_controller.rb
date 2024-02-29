@@ -1,10 +1,10 @@
 class PrototypesController < ApplicationController
-  before_action :set_prototype, only: [:edit, :show]
-  before_action :move_to_index, except: [:index, :show]
-  before_action :authenticate_user!, except: [:index, :show] 
+  before_action :set_prototype, except: [:index, :new, :create]
+  before_action :authenticate_user!, except: [:index, :show]
+  before_action :contributor_confirmation, only: [:edit, :update, :destroy] 
 
   def index
-    @prototypes = Prototype.all.includes(:user)
+    @prototypes = Prototype.includes(:user)
   end
   
 
@@ -14,12 +14,10 @@ class PrototypesController < ApplicationController
 
   def create
     @prototype = Prototype.new(prototype_params)
-
     if @prototype.save
-      redirect_to root_path(@prototype)
+      redirect_to root_path
     else
-      render :new
-      @prototype =Prototype.includes(:user)
+      render :new, status: :unprocessable_entity
     end
   end
 
@@ -29,11 +27,6 @@ class PrototypesController < ApplicationController
   end
 
   def edit
-    @prototype = Prototype.find(params[:id])
-    unless user_signed_in? && current_user.id == @prototype.user_id
-      redirect_to root_path
-    end
-
   end
 
   def update
@@ -46,20 +39,17 @@ class PrototypesController < ApplicationController
   end
 
   def destroy
-    prototype = Prototype.find(params[:id])
-    prototype.destroy
-    redirect_to root_path
+    if @prototype.destroy
+      redirect_to root_path
+    else
+      redirect_to root_path
+    end
   end
 
   
   private
 
 
-  def move_to_index
-    unless user_signed_in?
-      redirect_to action: :index
-    end
-  end
 
   def prototype_params
     params.require(:prototype).permit(:image,:title,:catch_copy,:concept).merge(user_id: current_user.id)
@@ -67,10 +57,9 @@ class PrototypesController < ApplicationController
 
   def set_prototype
     @prototype = Prototype.find(params[:id])
- end
+  end
 
- def authenticate_user!
-  redirect_to new_user_session_path unless user_signed_in?
- end
-
+  def contributor_confirmation
+  redirect_to root_path unless current_user == @prototype.user
+  end
 end
